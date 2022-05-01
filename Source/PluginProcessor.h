@@ -83,8 +83,16 @@ public:
     
 
 private:   
-    void addFilterBand(juce::AudioBuffer<float>& buffer, juce::AudioBuffer<float>& bandBuffer);
+    
+    //
+    void readFromBuffer(juce::AudioBuffer<float>& buffer, juce::AudioBuffer<float>& delayBuffer, int channel, int bufferSize, int delayBufferSize);
+    void fillBuffer(int channel, int bufferSize, int delayBufferSize, float* channelData);
+    int writePosition{ 0 };
+    juce::AudioBuffer<float> delayBuffer;
 
+
+
+    void addFilterBand(juce::AudioBuffer<float>& buffer, juce::AudioBuffer<float>& bandBuffer);
     using Filter = juce::dsp::LinkwitzRileyFilter<float>;
     Filter LP, HP, AP;
     Filter LP2, HP2, AP2;
