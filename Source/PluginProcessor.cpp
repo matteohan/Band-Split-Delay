@@ -191,7 +191,7 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     {
         fb = buffer;
     }
-
+    // Setting cutoffs for filters
     auto lowCutoff = lowMidCrossover->get();
     auto highCutoff = midHighCrossover->get();
     auto cutoff = lowMidCrossover->get();
@@ -203,6 +203,7 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     LP2.setCutoffFrequency(highCutoff);
     HP2.setCutoffFrequency(highCutoff);
 
+    //Block of audio to be processed/split by bands
     auto fb0Block = juce::dsp::AudioBlock<float>(filterBuffers[0]);
     auto fb1Block = juce::dsp::AudioBlock<float>(filterBuffers[1]);
     auto fb2Block = juce::dsp::AudioBlock<float>(filterBuffers[2]);
@@ -211,6 +212,8 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     auto fb1Context = juce::dsp::ProcessContextReplacing<float>(fb1Block);
     auto fb2Context = juce::dsp::ProcessContextReplacing<float>(fb2Block);
 
+
+    //Processing the audio
     LP.process(fb0Context);
     AP2.process(fb1Context);
 
@@ -219,39 +222,35 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
 
     LP2.process(fb1Context);
     HP2.process(fb2Context);
+    //===
      
-
-    auto numSamples = buffer.getNumSamples();
-    auto numChannels = buffer.getNumChannels();
 
     buffer.clear();
 
-    auto addFilterBand = [nc = numChannels, ns = numSamples](auto& inputBuffer, const auto& source) {
-        for (auto i = 0; i < nc ; i++)
-        {
-            inputBuffer.addFrom(i, 0, source, i, 0, ns);
-            
-
-        }
-    };
-
-
-
-
+    //Controlling volume of bands
     filterBuffers[0].applyGain(*lowGain);
     filterBuffers[1].applyGain(*midGain);
     filterBuffers[2].applyGain(*highGain);
-    
-    
+     
 
-
-
-    addFilterBand(buffer, filterBuffers[0]);
-    addFilterBand(buffer, filterBuffers[1]);
-    addFilterBand(buffer, filterBuffers[2]);
+    for (auto& bandBuffer : filterBuffers) {
+        addFilterBand(buffer, bandBuffer);
+    }
 
 }
 
+
+void BandSplitDelayAudioProcessor::addFilterBand(juce::AudioBuffer<float>& buffer, juce::AudioBuffer<float>& bandBuffer) {
+
+    auto nc = buffer.getNumChannels();
+    auto ns = buffer.getNumSamples();
+
+        for (auto i = 0; i < nc; i++)
+        {
+            buffer.addFrom(i, 0, bandBuffer, i, 0, ns); 
+
+        }
+}
 //==============================================================================
 bool BandSplitDelayAudioProcessor::hasEditor() const
 {

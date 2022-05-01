@@ -83,6 +83,7 @@ public:
     
 
 private:   
+    void addFilterBand(juce::AudioBuffer<float>& buffer, juce::AudioBuffer<float>& bandBuffer);
 
     using Filter = juce::dsp::LinkwitzRileyFilter<float>;
     Filter LP, HP, AP;
