@@ -203,7 +203,7 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     LP2.setCutoffFrequency(highCutoff);
     HP2.setCutoffFrequency(highCutoff);
 
-    //Block of audio to be processed/split by bands
+    //Block of audio to be processed(split) by bands
     auto fb0Block = juce::dsp::AudioBlock<float>(filterBuffers[0]);
     auto fb1Block = juce::dsp::AudioBlock<float>(filterBuffers[1]);
     auto fb2Block = juce::dsp::AudioBlock<float>(filterBuffers[2]);
@@ -233,10 +233,9 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
 
     for (int channel = 0; channel < totalNumInputChannels; channel++)
     {
-        auto* channelData = buffer.getWritePointer(channel);
-        fillBuffer(channel, bufferSize, delayBufferSize, channelData);
-        readFromBuffer(buffer, delayBuffer, channel, bufferSize, delayBufferSize);
-        fillBuffer(channel, bufferSize, delayBufferSize, channelData);
+        fillBuffer(buffer, channel);
+        readFromBuffer(buffer, channel);
+        fillBuffer(buffer, channel);
 
     }
      
@@ -254,9 +253,14 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     writePosition %= delayBufferSize;
 }
 
-void BandSplitDelayAudioProcessor::readFromBuffer(juce::AudioBuffer<float>& buffer, juce::AudioBuffer<float>& delayBuffer, int channel, int bufferSize, int delayBufferSize) {
+void BandSplitDelayAudioProcessor::readFromBuffer(
+    juce::AudioBuffer<float>& buffer, 
+    int channel
+) {
 
     auto readPosition = writePosition - (getSampleRate() * 0.5f);
+    int delayBufferSize = delayBuffer.getNumSamples();
+    int bufferSize = buffer.getNumSamples();
 
     if (readPosition < 0) {
         readPosition += delayBufferSize;
@@ -278,8 +282,14 @@ void BandSplitDelayAudioProcessor::readFromBuffer(juce::AudioBuffer<float>& buff
     }
 }
 
-void BandSplitDelayAudioProcessor::fillBuffer(int channel, int bufferSize, int delayBufferSize, float* channelData) {
-    
+void BandSplitDelayAudioProcessor::fillBuffer(
+    juce::AudioBuffer<float>& buffer,
+    int channel 
+) {
+    auto* channelData = buffer.getWritePointer(channel);
+    auto bufferSize = buffer.getNumSamples();
+    int delayBufferSize = delayBuffer.getNumSamples();
+
     if (delayBufferSize > bufferSize + writePosition)
     {
         delayBuffer.copyFrom(channel, writePosition, channelData, bufferSize);
