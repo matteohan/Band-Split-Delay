@@ -120,7 +120,9 @@ void BandSplitDelayAudioProcessor::prepareToPlay (double sampleRate, int samples
     // initialisation that you need..
 
     auto delayBufferSize = sampleRate * 2;
-    delayBuffer.setSize(getTotalNumOutputChannels(), (int)delayBufferSize);
+    lowDelayBuffer.setSize(getTotalNumOutputChannels(), (int)delayBufferSize);
+    midDelayBuffer.setSize(getTotalNumOutputChannels(), (int)delayBufferSize);
+    highDelayBuffer.setSize(getTotalNumOutputChannels(), (int)delayBufferSize);
 
 
     juce::dsp::ProcessSpec spec;
@@ -223,31 +225,28 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     HP2.process(fb2Context);
     //===
      
-
-
-
-    auto bufferSize = buffer.getNumSamples();
-    auto delayBufferSize = delayBuffer.getNumSamples();
-
-
+    buffer.clear();
 
     for (int channel = 0; channel < totalNumInputChannels; channel++)
     {
-        fillBuffer(buffer, channel);
-        readFromBuffer(buffer, channel);
-        fillBuffer(buffer, channel);
+        fillBuffer(filterBuffers[2], highDelayBuffer, channel);
+        readFromBuffer(filterBuffers[2], highDelayBuffer, channel);
+        fillBuffer(filterBuffers[2], highDelayBuffer, channel);
 
     }
      
 
-    ////Controlling volume of bands
-    //filterBuffers[0].applyGain(*lowGain);
-    //filterBuffers[1].applyGain(*midGain);
-    //filterBuffers[2].applyGain(*highGain);
+    //Controlling volume of bands
+    filterBuffers[0].applyGain(*lowGain);
+    filterBuffers[1].applyGain(*midGain);
+    filterBuffers[2].applyGain(*highGain);
 
-    //for (auto& bandBuffer : filterBuffers) {
-    //    addFilterBand(buffer, bandBuffer);
-    //}
+    for (auto& bandBuffer : filterBuffers) {
+        addFilterBand(buffer, bandBuffer);
+    }
+
+    auto bufferSize = buffer.getNumSamples();
+    auto delayBufferSize = highDelayBuffer.getNumSamples();
 
     writePosition += bufferSize;
     writePosition %= delayBufferSize;
@@ -255,6 +254,7 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
 
 void BandSplitDelayAudioProcessor::readFromBuffer(
     juce::AudioBuffer<float>& buffer, 
+    juce::AudioBuffer<float>& delayBuffer, 
     int channel
 ) {
 
@@ -284,11 +284,14 @@ void BandSplitDelayAudioProcessor::readFromBuffer(
 
 void BandSplitDelayAudioProcessor::fillBuffer(
     juce::AudioBuffer<float>& buffer,
+    juce::AudioBuffer<float>& delayBuffer,
     int channel 
 ) {
+    auto delayBufferSize = delayBuffer.getNumSamples();
+
     auto* channelData = buffer.getWritePointer(channel);
     auto bufferSize = buffer.getNumSamples();
-    int delayBufferSize = delayBuffer.getNumSamples();
+    delayBufferSize = delayBuffer.getNumSamples();
 
     if (delayBufferSize > bufferSize + writePosition)
     {
