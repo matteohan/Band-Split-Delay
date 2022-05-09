@@ -15,7 +15,7 @@ struct CustomRotarySlider : juce::Slider
 {
     CustomRotarySlider() : juce::Slider(
         juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag,
-        juce::Slider::TextEntryBoxPosition::NoTextBox)
+        juce::Slider::TextEntryBoxPosition::TextBoxBelow)
     {
 
     }
@@ -41,6 +41,18 @@ private:
     BandSplitDelayAudioProcessor& audioProcessor;
 
     using Attachment = juce::AudioProcessorValueTreeState::SliderAttachment;
+    juce::Label
+        lowLabel,
+        midLabel,
+        highLabel,
+        lowDryLabel,
+        midDryLabel,
+        highDryLabel,
+        lowWetLabel,
+        midWetLabel,
+        highWetLabel,
+        lowMidCrosLabel,
+        midHighCrosLabel;
 
     CustomRotarySlider
         lowDrySlider,
@@ -66,7 +78,7 @@ private:
 
 
     std::vector<juce::Component*> getComps();
-
+    std::vector<juce::Label*> getLabels();
     
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BandSplitDelayAudioProcessorEditor)

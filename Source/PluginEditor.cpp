@@ -32,17 +32,39 @@ BandSplitDelayAudioProcessorEditor::BandSplitDelayAudioProcessorEditor(BandSplit
         addAndMakeVisible(component);
     }
 
-    lowDrySlider.setColour(juce::Slider::thumbColourId, juce::Colours::red);
-    midDrySlider.setColour(juce::Slider::thumbColourId, juce::Colours::orange);
-    highDrySlider.setColour(juce::Slider::thumbColourId, juce::Colours::yellow);
+    lowDrySlider.setColour(juce::Slider::thumbColourId, juce::Colours::lightblue);
+    midDrySlider.setColour(juce::Slider::thumbColourId, juce::Colours::lightblue);
+    highDrySlider.setColour(juce::Slider::thumbColourId, juce::Colours::lightblue);
+    lowWetSlider.setColour(juce::Slider::thumbColourId, juce::Colours::yellow);
+    midWetSlider.setColour(juce::Slider::thumbColourId, juce::Colours::yellow);
+    highWetSlider.setColour(juce::Slider::thumbColourId, juce::Colours::yellow);
+
+    lowLabel.setText("LOW", juce::dontSendNotification);
+    midLabel.setText("MID", juce::dontSendNotification);
+    highLabel.setText("HIGH", juce::dontSendNotification);
+
+    lowMidCrosLabel.setText("Low->Mid \n Crossover", juce::dontSendNotification);
+    midHighCrosLabel.setText("Mid->High \n Crossover", juce::dontSendNotification);
+    
+    lowMidCrosLabel.attachToComponent(&lowMidCrosSlider, false);
+    midHighCrosLabel.attachToComponent(&midHighCrosSlider, false);
+
+    lowDryLabel.setText("DRY", juce::dontSendNotification);
+    midDryLabel.setText("DRY", juce::dontSendNotification);
+    highDryLabel.setText("DRY", juce::dontSendNotification);
+    lowWetLabel.setText("WET", juce::dontSendNotification);
+    midWetLabel.setText("WET", juce::dontSendNotification);
+    highWetLabel.setText("WET", juce::dontSendNotification);
+
+    for (auto* label : getLabels()) {
+        label->setJustificationType(juce::Justification::centred);
+    }
 
 
+    
+   
 
-    //addAndMakeVisible(lowDrySlider);
-    //addAndMakeVisible(midDrySlider);
-    //addAndMakeVisible(highDrySlider);
-
-    setSize (600, 500);
+    setSize(600, 500);
     setResizable(false, false);
     isResizable();
 }
@@ -59,9 +81,6 @@ void BandSplitDelayAudioProcessorEditor::paint (juce::Graphics& g)
 
     g.setColour (juce::Colours::white);
     g.setFont (15.0f);
-
-    g.drawLine(getWidth() * 0.33, 10, getWidth() * 0.33, getHeight() - 10);
-    g.drawLine(getWidth() * 0.66, 10, getWidth() * 0.66, getHeight() - 10);
 }
 
 void BandSplitDelayAudioProcessorEditor::resized()
@@ -74,8 +93,37 @@ void BandSplitDelayAudioProcessorEditor::resized()
     auto width = bounds.getWidth();
     auto height = bounds.getHeight();
 
-    auto wetDryArea = bounds.removeFromBottom(bounds.getHeight() * 0.75);
+    auto labelArea = bounds.removeFromTop(bounds.getHeight() * 0.1);
 
+    auto bandLabelsArea = labelArea.removeFromTop(labelArea.getHeight() * 0.75);
+
+    auto lowLabelArea = bandLabelsArea.removeFromLeft(bandLabelsArea.getWidth() * 0.33);
+    auto midLabelArea = bandLabelsArea.removeFromLeft(bandLabelsArea.getWidth() * 0.5);
+    auto highLabelArea = bandLabelsArea;
+
+    lowLabel.setBounds(lowLabelArea);
+    midLabel.setBounds(midLabelArea);
+    highLabel.setBounds(highLabelArea);
+
+    auto lowDryLabelArea = labelArea.removeFromLeft(labelArea.getWidth() * 0.33);
+    auto midDryLabelArea = labelArea.removeFromLeft(labelArea.getWidth() * 0.5);
+    auto highDryLabelArea = labelArea;
+
+    auto lowWetLabelArea = lowDryLabelArea.removeFromRight(lowDryLabelArea.getWidth() * 0.5);
+    auto midWetLabelArea = midDryLabelArea.removeFromRight(midDryLabelArea.getWidth() * 0.5);
+    auto highWetLabelArea = highDryLabelArea.removeFromRight(highDryLabelArea.getWidth() * 0.5);
+
+    lowDryLabel.setBounds(lowDryLabelArea);
+    midDryLabel.setBounds(midDryLabelArea);
+    highDryLabel.setBounds(highDryLabelArea);
+    
+    lowWetLabel.setBounds(lowWetLabelArea);
+    midWetLabel.setBounds(midWetLabelArea);
+    highWetLabel.setBounds(highWetLabelArea);
+
+
+
+    auto wetDryArea = bounds.removeFromBottom(bounds.getHeight() * 0.75);
 
     auto lowDryArea = bounds.removeFromLeft(bounds.getWidth() * 0.33);
     auto midDryArea = bounds.removeFromLeft(bounds.getWidth() * 0.5);
@@ -92,10 +140,10 @@ void BandSplitDelayAudioProcessorEditor::resized()
     midWetSlider.setBounds(midWetArea);
     highWetSlider.setBounds(highWetArea);
 
-    
 
     lowMidCrosSlider.setBounds(width * 0.33 - 75, height * 0.6 - 75, 150, 150);
     midHighCrosSlider.setBounds(width * 0.66 - 75, height * 0.6 - 75, 150, 150);
+
 
 
 
@@ -112,6 +160,22 @@ std::vector<juce::Component*> BandSplitDelayAudioProcessorEditor::getComps()
 {
     return
     {
+        &lowLabel,
+        &midLabel,
+        &highLabel,
+
+
+        &lowDryLabel,
+        &midDryLabel,
+        &highDryLabel,
+
+        &lowWetLabel,
+        &midWetLabel,
+        &highWetLabel,
+
+        &lowMidCrosLabel,
+        &midHighCrosLabel,
+
         &lowDrySlider,
         &lowWetSlider,
         &midDrySlider,
@@ -123,4 +187,27 @@ std::vector<juce::Component*> BandSplitDelayAudioProcessorEditor::getComps()
         &midHighCrosSlider
     };
          
+}
+
+std::vector<juce::Label*>  BandSplitDelayAudioProcessorEditor::getLabels()
+{
+    return {
+
+        &lowLabel,
+        &midLabel,
+        &highLabel,
+
+
+        &lowDryLabel,
+        &midDryLabel,
+        &highDryLabel,
+
+        & lowMidCrosLabel,
+        & midHighCrosLabel,
+
+        &lowWetLabel,
+        &midWetLabel,
+        &highWetLabel
+    };
+   
 }
