@@ -9,14 +9,26 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+using namespace Params;
+const auto& params = GetParams();
+
+
 //==============================================================================
-BandSplitDelayAudioProcessorEditor::BandSplitDelayAudioProcessorEditor (BandSplitDelayAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
+BandSplitDelayAudioProcessorEditor::BandSplitDelayAudioProcessorEditor(BandSplitDelayAudioProcessor& p)
+    : AudioProcessorEditor(&p), audioProcessor(p),
+    lowDrySliderAttachment(audioProcessor.apvts, params.at(Names::Low_Dry), lowDrySlider),
+    lowWetSliderAttachment(audioProcessor.apvts, params.at(Names::Low_Wet), lowWetSlider),
+    midDrySliderAttachment(audioProcessor.apvts, params.at(Names::Mid_Dry), midDrySlider),
+    midWetSliderAttachment(audioProcessor.apvts, params.at(Names::Mid_Wet), midWetSlider),
+    highDrySliderAttachment(audioProcessor.apvts, params.at(Names::High_Dry), highDrySlider),
+    highWetSliderAttachment(audioProcessor.apvts, params.at(Names::High_Wet), highWetSlider),
+    lowMidCrosSliderAttachment(audioProcessor.apvts, params.at(Names::Low_Mid_Crossover), lowMidCrosSlider),
+    midHighCrosSliderAttachment(audioProcessor.apvts, params.at(Names::Mid_High_Crossover), midHighCrosSlider)
 {
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
 
-    for (auto& component : getComps()) {
+    for (auto* component : getComps()) {
         addAndMakeVisible(component);
     }
 
@@ -56,7 +68,7 @@ void BandSplitDelayAudioProcessorEditor::resized()
 {
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
-
+    
 
     auto bounds = getLocalBounds();
     auto width = bounds.getWidth();

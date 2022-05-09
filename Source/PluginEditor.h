@@ -21,6 +21,7 @@ struct CustomRotarySlider : juce::Slider
     }
 };
 
+
 //==============================================================================
 /**
 */
@@ -39,6 +40,8 @@ private:
     // access the processor object that created it.
     BandSplitDelayAudioProcessor& audioProcessor;
 
+    using Attachment = juce::AudioProcessorValueTreeState::SliderAttachment;
+
     CustomRotarySlider
         lowDrySlider,
         lowWetSlider,
@@ -50,7 +53,21 @@ private:
         lowMidCrosSlider,
         midHighCrosSlider;
 
+    Attachment 
+        lowDrySliderAttachment,
+        lowWetSliderAttachment,
+        midDrySliderAttachment,
+        midWetSliderAttachment,
+        highDrySliderAttachment,
+        highWetSliderAttachment,
+
+        lowMidCrosSliderAttachment,
+        midHighCrosSliderAttachment;
+
+
     std::vector<juce::Component*> getComps();
+
+    
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BandSplitDelayAudioProcessorEditor)
 };
