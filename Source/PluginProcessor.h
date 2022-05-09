@@ -17,9 +17,18 @@ namespace Params {
         Low_Wet,
         Mid_Wet,
         High_Wet,
+        Low_Dry,
+        Mid_Dry,
+        High_Dry,
 
         Low_Mid_Crossover,
         Mid_High_Crossover,
+
+        Delay_Time,
+
+        Low_Reverb_Size,
+        Mid_Reverb_Size,
+        High_Reverb_Size,        
     };
 
     inline const std::map<Names, juce::String>& GetParams() {
@@ -27,8 +36,15 @@ namespace Params {
         {Low_Wet, "Low Wet"},
         {Mid_Wet, "Mid Wet"},
         {High_Wet, "High Wet"},
+        {Low_Dry, "Low Dry"},
+        {Mid_Dry, "Mid Dry"},
+        {High_Dry, "High Dry"},
         {Low_Mid_Crossover, "Low Mid Crossover"},
         {Mid_High_Crossover, "Mid High Crossover"},
+        {Delay_Time, "Delay Time"},
+        {Low_Reverb_Size, "Low Reverb Size"},
+        {Mid_Reverb_Size, "Mid Reverb Size"},
+        {High_Reverb_Size, "High Reverb Size"},
         };
 
         return params;
@@ -88,33 +104,52 @@ private:
     void readFromBuffer(
         juce::AudioBuffer<float>& buffer, 
         juce::AudioBuffer<float>& delayBuffer, 
-        int channel 
+        int channel
     );
     void fillBuffer(
         juce::AudioBuffer<float>& buffer,
         juce::AudioBuffer<float>& delayBuffer,
         int channel
     );
+    float ChangeDelayTime(
+        int delayTimeIndex
+    );
+    std::array<juce::AudioBuffer<float>, 3> delayBuffers;
     int writePosition{ 0 };
     juce::AudioBuffer<float> lowDelayBuffer;
     juce::AudioBuffer<float> midDelayBuffer;
     juce::AudioBuffer<float> highDelayBuffer;
+    juce::AudioParameterChoice* delayTime {nullptr};
+    float denominator { 4 };
+     
 
-
+    juce::dsp::Reverb highReverb, midReverb, lowReverb;
+    juce::dsp::Reverb::Parameters highReverbParams, midReverbParams, lowReverbParams;
+   
+    //Filter variables
+    using Filter = juce::dsp::LinkwitzRileyFilter<float>;
 
     void addFilterBand(juce::AudioBuffer<float>& buffer, juce::AudioBuffer<float>& bandBuffer);
-    using Filter = juce::dsp::LinkwitzRileyFilter<float>;
+    std::array<juce::AudioBuffer<float>, 3> filterBuffers;
     Filter LP, HP, AP;
     Filter LP2, HP2, AP2;
     juce::AudioParameterFloat* lowMidCrossover{ nullptr };
     juce::AudioParameterFloat* midHighCrossover{ nullptr };
-    juce::AudioParameterFloat* lowGain{ nullptr };
-    juce::AudioParameterFloat* midGain{ nullptr };
-    juce::AudioParameterFloat* highGain{ nullptr };
 
+    juce::AudioParameterFloat* dryLowGain{ nullptr };
+    juce::AudioParameterFloat* dryMidGain{ nullptr };
+    juce::AudioParameterFloat* dryHighGain{ nullptr };
 
-    std::array<juce::AudioBuffer<float>, 3> filterBuffers;
-        
+    juce::AudioParameterFloat* wetLowGain{ nullptr };
+    juce::AudioParameterFloat* wetMidGain{ nullptr };
+    juce::AudioParameterFloat* wetHighGain{ nullptr };
+
+    //=====
+    
+    juce::AudioBuffer<float> wetBuffer;
+    std::array<juce::AudioBuffer<float>, 3> dryBuffers;
+    juce::AudioPlayHead* playHead{ nullptr };
+    double bpm;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BandSplitDelayAudioProcessor)
 };

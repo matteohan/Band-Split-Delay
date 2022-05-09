@@ -32,9 +32,19 @@ BandSplitDelayAudioProcessor::BandSplitDelayAudioProcessor()
 
     floatHelper(lowMidCrossover, Names::Low_Mid_Crossover);
     floatHelper(midHighCrossover, Names::Mid_High_Crossover);
-    floatHelper(lowGain, Names::Low_Wet);
-    floatHelper(midGain, Names::Mid_Wet);
-    floatHelper(highGain, Names::High_Wet);
+    
+    floatHelper(dryLowGain, Names::Low_Dry);
+    floatHelper(dryMidGain, Names::Mid_Dry);
+    floatHelper(dryHighGain, Names::High_Dry);
+    
+    floatHelper(wetLowGain, Names::Low_Wet);
+    floatHelper(wetMidGain, Names::Mid_Wet);
+    floatHelper(wetHighGain, Names::High_Wet);
+
+
+
+    delayTime = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter(params.at(Delay_Time)));
+    jassert(delayTime != nullptr);
 
     LP.setType(juce::dsp::LinkwitzRileyFilterType::lowpass);
     HP.setType(juce::dsp::LinkwitzRileyFilterType::highpass);
@@ -119,11 +129,14 @@ void BandSplitDelayAudioProcessor::prepareToPlay (double sampleRate, int samples
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
 
-    auto delayBufferSize = sampleRate * 2;
-    lowDelayBuffer.setSize(getTotalNumOutputChannels(), (int)delayBufferSize);
-    midDelayBuffer.setSize(getTotalNumOutputChannels(), (int)delayBufferSize);
-    highDelayBuffer.setSize(getTotalNumOutputChannels(), (int)delayBufferSize);
 
+
+    wetBuffer.setSize(getTotalNumOutputChannels(), sampleRate);
+
+    auto delayBufferSize = sampleRate * 2;
+    for (auto& buffer : delayBuffers) {
+        buffer.setSize(getTotalNumOutputChannels(), (int)delayBufferSize);
+    }
 
     juce::dsp::ProcessSpec spec;
     spec.maximumBlockSize = samplesPerBlock;
@@ -137,6 +150,14 @@ void BandSplitDelayAudioProcessor::prepareToPlay (double sampleRate, int samples
     LP2.prepare(spec);
     HP2.prepare(spec);
     AP2.prepare(spec);
+
+    lowReverb.prepare(spec);
+    midReverb.prepare(spec);
+    highReverb.prepare(spec);
+
+    /*lowReverb.setSampleRate(sampleRate);
+    midReverb.setSampleRate(sampleRate);
+    highReverb.setSampleRate(sampleRate);*/
 
     for (auto& buffer : filterBuffers) 
     {
@@ -188,6 +209,15 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
+    if (auto* playHead = getPlayHead())
+    {
+        juce::AudioPlayHead::CurrentPositionInfo info;
+        playHead->getCurrentPosition(info);
+        bpm = info.bpm;
+    }
+
+    
+
 
     for ( auto& fb : filterBuffers)
     {
@@ -198,12 +228,16 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     auto highCutoff = midHighCrossover->get();
     auto cutoff = lowMidCrossover->get();
 
+    //auto curDelayTime = delayTime->getCurrentChoiceName();
+
     LP.setCutoffFrequency(lowCutoff);
     HP.setCutoffFrequency(lowCutoff);
     AP.setCutoffFrequency(highCutoff);
 
     LP2.setCutoffFrequency(highCutoff);
     HP2.setCutoffFrequency(highCutoff);
+
+    
 
     //Block of audio to be processed(split) by bands
     auto fb0Block = juce::dsp::AudioBlock<float>(filterBuffers[0]);
@@ -213,6 +247,9 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     auto fb1Context = juce::dsp::ProcessContextReplacing<float>(fb1Block);
     auto fb2Context = juce::dsp::ProcessContextReplacing<float>(fb2Block);
 
+
+    //denominator = ChangeDelayTime(delayTimeIndex);
+    
 
     //Processing the audio
     LP.process(fb0Context);
@@ -224,32 +261,116 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     LP2.process(fb1Context);
     HP2.process(fb2Context);
     //===
-     
+    
+    auto i = 0;
+    for (auto& buffer : filterBuffers) {
+        dryBuffers[i] = buffer;
+        i++;
+    }
+
+
+
     buffer.clear();
 
     for (int channel = 0; channel < totalNumInputChannels; channel++)
     {
-        fillBuffer(filterBuffers[2], highDelayBuffer, channel);
-        readFromBuffer(filterBuffers[2], highDelayBuffer, channel);
-        fillBuffer(filterBuffers[2], highDelayBuffer, channel);
+
+        for (size_t i = 0; i < 3; i++)
+        {
+            fillBuffer(filterBuffers[i], delayBuffers[i], channel);
+            readFromBuffer(filterBuffers[i], delayBuffers[i], channel);
+            fillBuffer(filterBuffers[i], delayBuffers[i], channel);
+
+        }
+
+        /*fillBuffer(filterBuffers[2], delayBuffers[2], channel);
+        readFromBuffer(filterBuffers[2], delayBuffers[2], channel);
+        fillBuffer(filterBuffers[2], delayBuffers[2], channel);*/
 
     }
+
+    //for (auto& buffer : filterBuffers) {
+    //    auto revBlock = juce::dsp::AudioBlock<float>(buffer);
+    //    auto revContext = juce::dsp::ProcessContextReplacing<float>(revBlock);
+    //    lowReverb.process(revContext);
+    //}
      
-
     //Controlling volume of bands
-    filterBuffers[0].applyGain(*lowGain);
-    filterBuffers[1].applyGain(*midGain);
-    filterBuffers[2].applyGain(*highGain);
+    dryBuffers[0].applyGain(*dryLowGain);
+    dryBuffers[1].applyGain(*dryMidGain);
+    dryBuffers[2].applyGain(*dryHighGain);
+    
+    filterBuffers[0].applyGain(*wetLowGain);
+    filterBuffers[1].applyGain(*wetMidGain);
+    filterBuffers[2].applyGain(*wetHighGain);
+    //=====
 
+
+    for (auto& bandBuffer : dryBuffers) {
+        addFilterBand(buffer, bandBuffer);
+    }
     for (auto& bandBuffer : filterBuffers) {
         addFilterBand(buffer, bandBuffer);
     }
 
+
+    //auto revBlock = juce::dsp::AudioBlock<float>(buffer);
+    //auto revContext = juce::dsp::ProcessContextReplacing<float>(revBlock);
+
+    //lowReverb.process(revContext);
+
+
     auto bufferSize = buffer.getNumSamples();
-    auto delayBufferSize = highDelayBuffer.getNumSamples();
+    auto delayBufferSize = delayBuffers[2].getNumSamples();
 
     writePosition += bufferSize;
     writePosition %= delayBufferSize;
+}
+
+float ChangeDelayTime(int delayTimeIndex) {
+    switch (delayTimeIndex)
+    {
+
+    //Default quarter note delay
+    default:
+        return 1;
+        break;
+    
+    //16th note delay
+    case 0:
+        return 1 / 4;
+        break;
+    
+    //8th note delay
+    case 1:
+        return 1 / 2;
+        break;
+    
+    //6th note delay
+    case 2:
+        return 4 / 6;
+        break;
+
+    //Quarter note delay
+    case 3:
+        return 1;
+        break;
+
+    //Triplet delay
+    case 4:
+        return 4 / 3;
+        break;
+
+    //Half Note Delay
+    case 5:
+        return 2;
+        break;
+
+    //Whole note delay
+    case 6:
+        return 4;
+        break;
+    }
 }
 
 void BandSplitDelayAudioProcessor::readFromBuffer(
@@ -258,7 +379,7 @@ void BandSplitDelayAudioProcessor::readFromBuffer(
     int channel
 ) {
 
-    auto readPosition = writePosition - (getSampleRate() * 0.5f);
+    auto readPosition = writePosition - (getSampleRate() * (60/bpm));
     int delayBufferSize = delayBuffer.getNumSamples();
     int bufferSize = buffer.getNumSamples();
 
@@ -354,6 +475,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout BandSplitDelayAudioProcessor
     using namespace Params;
     const auto& params = GetParams();
 
+    juce::StringArray delayTimes = { "1/16", "1/8", "1/6", "1/4", "1/3", "1/2", "1/1"};
+
     layout.add(std::make_unique<AudioParameterFloat>(params.at( Names::High_Wet),
                                                                 params.at(Names::High_Wet),
                                                                 NormalisableRange<float>(0.f, 1.f, 0.01f, 1.f),
@@ -366,6 +489,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout BandSplitDelayAudioProcessor
                                                                 params.at(Names::Low_Wet),
                                                                 NormalisableRange<float>(0.f, 1.f, 0.01f, 1.f),
                                                                 0.5f));
+    layout.add(std::make_unique<AudioParameterFloat>(params.at( Names::High_Dry),
+                                                                params.at(Names::High_Dry),
+                                                                NormalisableRange<float>(0.f, 1.f, 0.01f, 1.f),
+                                                                0.5f));
+    layout.add(std::make_unique<AudioParameterFloat>(params.at( Names::Mid_Dry),
+                                                                params.at(Names::Mid_Dry),
+                                                                NormalisableRange<float>(0.f, 1.f, 0.01f, 1.f),
+                                                                0.5f));
+    layout.add(std::make_unique<AudioParameterFloat>(params.at( Names::Low_Dry),
+                                                                params.at(Names::Low_Dry),
+                                                                NormalisableRange<float>(0.f, 1.f, 0.01f, 1.f),
+                                                                0.5f));
 
 
     layout.add(std::make_unique<AudioParameterFloat>(   params.at(Names::Low_Mid_Crossover),
@@ -376,6 +511,33 @@ juce::AudioProcessorValueTreeState::ParameterLayout BandSplitDelayAudioProcessor
                                                         params.at(Names::Mid_High_Crossover),
                                                         NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f), 
                                                         7000.f));
+    layout.add(std::make_unique<AudioParameterChoice>(
+        params.at(Names::Delay_Time),
+        params.at(Names::Delay_Time),
+        delayTimes,
+        3
+        ));
+
+    layout.add(std::make_unique<AudioParameterFloat>(
+        params.at(Names::Low_Reverb_Size),
+        params.at(Names::Low_Reverb_Size),
+        NormalisableRange<float>(0.f, 1.f, 0.01f, 1.f),
+        0.5f
+        ));
+
+    layout.add(std::make_unique<AudioParameterFloat>(
+        params.at(Names::Mid_Reverb_Size),
+        params.at(Names::Mid_Reverb_Size),
+        NormalisableRange<float>(0.f, 1.f, 0.01f, 1.f),
+        0.5f
+        ));
+
+    layout.add(std::make_unique<AudioParameterFloat>(
+        params.at(Names::High_Reverb_Size),
+        params.at(Names::High_Reverb_Size),
+        NormalisableRange<float>(0.f, 1.f, 0.01f, 1.f),
+        0.5f
+        ));
 
 
     return layout;
