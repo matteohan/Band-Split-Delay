@@ -100,7 +100,7 @@ public:
 
 private:   
     
-    //
+    //Delay Variables
     void readFromBuffer(
         juce::AudioBuffer<float>& buffer, 
         juce::AudioBuffer<float>& delayBuffer, 
@@ -121,11 +121,14 @@ private:
     juce::AudioBuffer<float> highDelayBuffer;
     juce::AudioParameterChoice* delayTime {nullptr};
     float denominator { 4 };
-     
+    //========     
 
+    //Reverb Variables
     juce::dsp::Reverb highReverb, midReverb, lowReverb;
     juce::dsp::Reverb::Parameters highReverbParams, midReverbParams, lowReverbParams;
-   
+    //========
+
+    
     //Filter variables
     using Filter = juce::dsp::LinkwitzRileyFilter<float>;
 
