@@ -28,6 +28,7 @@ BandSplitDelayAudioProcessorEditor::BandSplitDelayAudioProcessorEditor(BandSplit
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
 
+
     for (auto* component : getComps()) {
         addAndMakeVisible(component);
     }
@@ -59,11 +60,7 @@ BandSplitDelayAudioProcessorEditor::BandSplitDelayAudioProcessorEditor(BandSplit
     for (auto* label : getLabels()) {
         label->setJustificationType(juce::Justification::centred);
     }
-
-
     
-   
-
     setSize(600, 500);
     setResizable(false, false);
     isResizable();
@@ -76,6 +73,7 @@ BandSplitDelayAudioProcessorEditor::~BandSplitDelayAudioProcessorEditor()
 //==============================================================================
 void BandSplitDelayAudioProcessorEditor::paint (juce::Graphics& g)
 {
+
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 

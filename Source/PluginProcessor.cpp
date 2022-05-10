@@ -248,7 +248,6 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     auto fb2Context = juce::dsp::ProcessContextReplacing<float>(fb2Block);
 
 
-    //denominator = ChangeDelayTime(delayTimeIndex);
     
 
     //Processing the audio
@@ -283,41 +282,38 @@ void BandSplitDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
 
         }
 
-        /*fillBuffer(filterBuffers[2], delayBuffers[2], channel);
-        readFromBuffer(filterBuffers[2], delayBuffers[2], channel);
-        fillBuffer(filterBuffers[2], delayBuffers[2], channel);*/
 
     }
-
-    //for (auto& buffer : filterBuffers) {
-    //    auto revBlock = juce::dsp::AudioBlock<float>(buffer);
-    //    auto revContext = juce::dsp::ProcessContextReplacing<float>(revBlock);
-    //    lowReverb.process(revContext);
-    //}
-     
+    
     //Controlling volume of bands
     dryBuffers[0].applyGain(*dryLowGain);
     dryBuffers[1].applyGain(*dryMidGain);
     dryBuffers[2].applyGain(*dryHighGain);
-    
+
+
     filterBuffers[0].applyGain(*wetLowGain);
     filterBuffers[1].applyGain(*wetMidGain);
     filterBuffers[2].applyGain(*wetHighGain);
+    
     //=====
 
 
-    for (auto& bandBuffer : dryBuffers) {
-        addFilterBand(buffer, bandBuffer);
-    }
+
     for (auto& bandBuffer : filterBuffers) {
         addFilterBand(buffer, bandBuffer);
     }
 
 
-    //auto revBlock = juce::dsp::AudioBlock<float>(buffer);
-    //auto revContext = juce::dsp::ProcessContextReplacing<float>(revBlock);
 
-    //lowReverb.process(revContext);
+
+    for (auto& bandBuffer : dryBuffers) {
+        addFilterBand(buffer, bandBuffer);
+    }
+
+
+    auto revBlock = juce::dsp::AudioBlock<float>(buffer);
+    auto revContext = juce::dsp::ProcessContextReplacing<float>(revBlock);
+    lowReverb.process(revContext);
 
 
     auto bufferSize = buffer.getNumSamples();
@@ -379,7 +375,7 @@ void BandSplitDelayAudioProcessor::readFromBuffer(
     int channel
 ) {
 
-    auto readPosition = writePosition - (getSampleRate() * (60/bpm));
+    auto readPosition = writePosition - (getSampleRate() * 0.5f);
     int delayBufferSize = delayBuffer.getNumSamples();
     int bufferSize = buffer.getNumSamples();
 
